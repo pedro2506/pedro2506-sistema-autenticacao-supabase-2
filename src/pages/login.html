@@ -223,14 +223,14 @@
           <img src="../assets/codeforge-logo.png" alt="CodeForce" class="header-logo" />
         </div>
         <h2>CodeForce <br /></h2>
-        <form id="login-form">
+        <form id="loginForm">
           <div class="input-group">
             <svg viewBox="0 0 24 24">
               <path
                 d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"
               />
             </svg>
-            <input type="email" id="email" placeholder="Email" required />
+            <input type="email" id="loginEmail" placeholder="Email" required />
           </div>
           <div class="input-group">
             <svg viewBox="0 0 24 24">
@@ -238,7 +238,7 @@
                 d="M18 8h-1V6c0-2.76-2.24-5-5-5S7 3.24 7 6v2H6c-1.1 0-2 .9-2 2v10c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V10c0-1.1-.9-2-2-2zm-6 9c-1.1 0-2-.9-2-2s.9-2 2-2 2 .9 2 2-.9 2-2 2zm3.1-9H8.9V6c0-1.71 1.39-3.1 3.1-3.1 1.71 0 3.1 1.39 3.1 3.1v2z"
               />
             </svg>
-            <input type="password" id="password" placeholder="Senha" required />
+            <input type="password" id="loginPassword" placeholder="Senha" required />
           </div>
           <div class="options">
             <span /> <a href="#" id="forgot-password">Esqueceu a Senha?</a>
@@ -248,72 +248,13 @@
           </div>
         </form>
         <p>Não tem uma conta? <a href="register.html">Cadastre-se</a></p>
-        <div id="message"></div>
+        <div id="loginError"></div>
       </div>
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="../config.js"></script>
-    <script>
-     
-      const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
-
-      const form = document.getElementById('login-form');
-      const message = document.getElementById("message");
-      const forgotPasswordLink = document.getElementById("forgot-password");
-
-      form.addEventListener("submit", async (e) => {
-        e.preventDefault();
-        message.textContent = "";
-        const email = document.getElementById("email").value.trim();
-        const password = document.getElementById("password").value;
-
-        const { error } = await supabaseClient.auth.signInWithPassword({
-          email,
-          password,
-        });
-
-        if (error) {
-          message.textContent = "Email ou senha inválidos.";
-          message.style.color = "#ff6b6b";
-        } else {
-          message.textContent = `Bem-vindo! Redirecionando...`;
-          message.style.color = "#81c784";
-          setTimeout(() => {
-            window.location.href = "dashboard.html";
-          }, 1500);
-        }
-      });
-
-      
-      forgotPasswordLink.addEventListener("click", async (e) => {
-        e.preventDefault(); 
-
-        const email = prompt(
-          "Por favor, digite seu e-mail para redefinir a senha:"
-        );
-
-        if (!email) {
-          return; 
-        }
-
-        const { error } = await supabaseClient.auth.resetPasswordForEmail(
-          email,
-          {
-            redirectTo: "http://127.0.0.1:5500/reset-password.html"
-          }
-        );
-
-        if (error) {
-          alert("Erro ao enviar o e-mail: " + error.message);
-        } else {
-          alert(
-            "E-mail de redefinição de senha enviado! Verifique sua caixa de entrada e spam."
-          );
-        }
-      });
-      // --- FIM DA NOVA FUNCIONALIDADE ---
-    </script>
+    <script src="../js/auth.js"></script>
     <script>
       // fallback de logo: tenta caminhos alternativos e, se falhar, insere um SVG simples
       (function(){
