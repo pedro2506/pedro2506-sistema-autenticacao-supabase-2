@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Teste de Login (Modo Offline)</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 600px;
+            margin: 50px auto;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        .container {
+            background: white;
+            padding: 30px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        h1 { color: #333; }
+        .info {
+            background: #e3f2fd;
+            padding: 15px;
+            border-left: 4px solid #2196F3;
+            margin-bottom: 20px;
+            border-radius: 4px;
+        }
+        input {
+            width: 100%;
+            padding: 10px;
+            margin: 10px 0;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 14px;
+            box-sizing: border-box;
+        }
+        button {
+            width: 100%;
+            padding: 12px;
+            background: #0f7f99;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 16px;
+            margin-top: 10px;
+        }
+        button:hover {
+            background: #0d6680;
+        }
+        .message {
+            margin-top: 15px;
+            padding: 12px;
+            border-radius: 4px;
+            display: none;
+        }
+        .success {
+            background: #c8e6c9;
+            color: #2e7d32;
+            display: block;
+        }
+        .error {
+            background: #ffcdd2;
+            color: #c62828;
+            display: block;
+        }
+        .credentials {
+            background: #fff3e0;
+            padding: 15px;
+            border-radius: 4px;
+            margin: 20px 0;
+            border-left: 4px solid #ff9800;
+        }
+        code {
+            background: #f5f5f5;
+            padding: 4px 8px;
+            border-radius: 3px;
+            font-family: monospace;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔐 Teste de Login (Modo Offline)</h1>
+        
+        <div class="info">
+            <strong>ℹ️ Informação:</strong> Este é um teste local para verificar se o frontend está funcionando. 
+            Para usar o login real, você precisa configurar corretamente as credenciais do Supabase.
+        </div>
+
+        <form id="testForm">
+            <input type="email" id="email" placeholder="seu@email.com" required>
+            <input type="password" id="password" placeholder="Sua senha" required>
+            <button type="submit">Fazer Login (Teste)</button>
+        </form>
+
+        <div id="message" class="message"></div>
+
+        <div class="credentials">
+            <h3>📋 Suas credenciais do Supabase:</h3>
+            <p><strong>URL:</strong> <code id="urlDisplay">--</code></p>
+            <p><strong>Chave:</strong> <code id="keyDisplay">--</code></p>
+            <p style="font-size: 12px; color: #666;">
+                Se estiverem vazias, significa que o arquivo config.js não foi carregado corretamente.
+            </p>
+        </div>
+
+        <h3>📝 Como configurar:</h3>
+        <ol>
+            <li>Abra seu projeto em <a href="https://supabase.com" target="_blank">supabase.com</a></li>
+            <li>Vá em <strong>Settings → API</strong></li>
+            <li>Copie <strong>Project URL</strong> e <strong>anon key</strong></li>
+            <li>Atualize <code>src/config.js</code> com essas credenciais</li>
+            <li>Recarregue a página de login</li>
+        </ol>
+
+        <h3>🔍 Debug Console:</h3>
+        <p>Abra o console do navegador (F12) para ver mensagens de erro detalhadas.</p>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="src/config.js"></script>
+    <script>
+        // Exibir credenciais carregadas
+        if (typeof SUPABASE_URL !== 'undefined') {
+            document.getElementById('urlDisplay').textContent = SUPABASE_URL;
+            document.getElementById('keyDisplay').textContent = SUPABASE_KEY.substring(0, 20) + '...';
+        } else {
+            document.getElementById('urlDisplay').textContent = 'NÃO CARREGADO';
+            document.getElementById('keyDisplay').textContent = 'NÃO CARREGADO';
+        }
+
+        const form = document.getElementById('testForm');
+        const message = document.getElementById('message');
+
+        form.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            message.className = 'message';
+            message.textContent = 'Testando conexão...';
+
+            const email = document.getElementById('email').value;
+            const password = document.getElementById('password').value;
+
+            console.log('Tentando login com:', email);
+            console.log('Supabase disponível:', typeof supabase !== 'undefined');
+            console.log('Config carregado:', typeof SUPABASE_URL !== 'undefined');
+
+            try {
+                const client = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+                
+                const { data, error } = await client.auth.signInWithPassword({
+                    email,
+                    password,
+                });
+
+                if (error) {
+                    console.error('Erro:', error);
+                    message.className = 'message error';
+                    message.textContent = '❌ Erro: ' + error.message;
+                } else {
+                    message.className = 'message success';
+                    message.textContent = '✅ Login bem-sucedido! Você será redirecionado...';
+                    setTimeout(() => {
+                        window.location.href = 'src/pages/dashboard.html';
+                    }, 2000);
+                }
+            } catch (err) {
+                console.error('Erro de rede:', err);
+                message.className = 'message error';
+                message.textContent = '❌ Erro de rede: ' + err.message;
+            }
+        });
+    </script>
+</body>
+</html>

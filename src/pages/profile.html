@@ -332,6 +332,9 @@
                 <label for="email">Email</label>
                 <input type="email" id="email" disabled>
                 
+                <label for="phone">Telefone</label>
+                <input type="tel" id="phone" placeholder="(11) 99999-9999">
+                
                 <label for="cpf">CPF</label>
                 <input type="text" id="cpf" placeholder="000.000.000-00">
                 
@@ -362,11 +365,14 @@
     
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="../config.js"></script>
+    <script src="../js/auth.js"></script>
     <script>
-       
-        const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+        // Usar o cliente já inicializado em auth.js
+        // Se não estiver disponível, criar novo
+        if (typeof supabaseClient === 'undefined') {
+            supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+        }
 
-        
         const message = document.getElementById('message');
         let user;
 
@@ -378,23 +384,28 @@
             }
             user = session.user;
 
-            const { data: profile } = await supabaseClient
-                .from('user_profiles')
-                .select('*')
-                .eq('id', user.id)
-                .single();
+            try {
+                const { data: profile, error } = await supabaseClient
+                    .from('user_profiles')
+                    .select('*')
+                    .eq('id', user.id)
+                    .single();
 
+                document.getElementById('email').value = user.email;
                 
-            
-            document.getElementById('email').value = user.email;
-            if (profile) {
-                document.getElementById('name').value = profile.name || '';
-                document.getElementById('address').value = profile.address || '';
-                document.getElementById('cpf').value = profile.cpf || '';
-                
-                if (profile.avatar_url) {
-                    document.getElementById('avatarPreview').src = profile.avatar_url;
+                if (profile) {
+                    document.getElementById('name').value = profile.name || '';
+                    document.getElementById('phone').value = profile.phone || '';
+                    document.getElementById('address').value = profile.address || '';
+                    document.getElementById('cpf').value = profile.cpf || '';
+                    
+                    if (profile.avatar_url) {
+                        document.getElementById('avatarPreview').src = profile.avatar_url;
+                    }
                 }
+            } catch (error) {
+                console.log('Primeiro acesso - perfil será criado ao salvar');
+                document.getElementById('email').value = user.email;
             }
         });
 
@@ -415,6 +426,7 @@
             
             const name = document.getElementById('name').value;
             const address = document.getElementById('address').value;
+            const phone = document.getElementById('phone').value;
             const cpf = document.getElementById('cpf').value;
             const file = document.getElementById('avatar').files[0];
             const password = document.getElementById('password').value;
@@ -423,46 +435,77 @@
                 let avatar_url = document.getElementById('avatarPreview').src;
                 let successMessage = 'Perfil atualizado com sucesso!';
 
+                // Fazer upload da foto se selecionada
                 if (file) {
                     const fileExt = file.name.split('.').pop();
                     const filePath = `${user.id}.${fileExt}`;
-                    await supabaseClient.storage
+                    
+                    const { error: uploadError } = await supabaseClient.storage
                         .from('avatars')
                         .upload(filePath, file, { upsert: true });
                     
-                    const { data: urlData } = supabaseClient.storage
-                        .from('avatars')
-                        .getPublicUrl(filePath);
-                    avatar_url = urlData.publicUrl;
-                    
-                    successMessage = 'Nova foto do perfil foi adicionada!';
+                    if (!uploadError) {
+                        const { data: urlData } = supabaseClient.storage
+                            .from('avatars')
+                            .getPublicUrl(filePath);
+                        avatar_url = urlData.publicUrl;
+                        successMessage = 'Nova foto do perfil foi adicionada! ';
+                    }
                 }
 
-                await supabaseClient
+                // Atualizar perfil
+                const { error: updateError } = await supabaseClient
                     .from('user_profiles')
                     .upsert({ 
                         id: user.id, 
                         name, 
+                        phone,
+                        email: user.email,
                         address, 
                         cpf, 
-                        avatar_url 
+                        avatar_url,
+                        updated_at: new Date().toISOString()
                     });
 
-                if (password) {
-                    await supabaseClient.auth.updateUser({ password });
-                    successMessage += ' Senha atualizada!';
+                if (updateError) {
+                    throw updateError;
                 }
 
-                message.textContent = successMessage;
+                // Atualizar senha se fornecida
+                if (password) {
+                    const { error: passwordError } = await supabaseClient.auth.updateUser({ password });
+                    if (!passwordError) {
+                        successMessage += ' Senha atualizada!';
+                    }
+                }
+
+                message.textContent = '✅ ' + successMessage;
                 message.style.color = '#81c784';
                 message.style.background = 'rgba(129, 199, 132, 0.15)';
                 message.style.border = '1px solid rgba(129, 199, 132, 0.3)';
+                message.style.padding = '12px';
+                message.style.borderRadius = '4px';
+                message.style.marginTop = '20px';
 
             } catch (err) {
-                message.textContent = 'Erro ao atualizar: ' + err.message;
+                console.error('Erro completo:', err);
+                let errorMsg = 'Erro ao atualizar perfil';
+                
+                if (err.message.includes('relation "user_profiles" does not exist')) {
+                    errorMsg = '❌ Erro: Tabela user_profiles não existe. Crie a tabela no Supabase SQL Editor primeiro.';
+                } else if (err.message.includes('42P01')) {
+                    errorMsg = '❌ Erro: Tabela user_profiles não encontrada. Execute o SQL no painel Supabase.';
+                } else {
+                    errorMsg = '❌ Erro ao atualizar: ' + (err.message || 'Erro desconhecido');
+                }
+                
+                message.textContent = errorMsg;
                 message.style.color = '#ff6b6b';
                 message.style.background = 'rgba(255, 107, 107, 0.15)';
                 message.style.border = '1px solid rgba(255, 107, 107, 0.3)';
+                message.style.padding = '12px';
+                message.style.borderRadius = '4px';
+                message.style.marginTop = '20px';
             }
         });
     </script>
